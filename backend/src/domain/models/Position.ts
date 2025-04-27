@@ -83,5 +83,79 @@ export class Position {
         if (!data) return null;
         return new Position(data);
     }
+
+    static async getCandidatesForPosition(positionId: number, options: any = {}): Promise<any[]> {
+        const { sort = 'name', order = 'asc', limit = 50, offset = 0 } = options;
+        
+        // Determinar campo de ordenamiento
+        let orderBy: any = {};
+        switch (sort) {
+            case 'stage':
+                orderBy = { interviewStep: { orderIndex: order } };
+                break;
+            case 'score':
+                // Ordenamiento por score se manejará después de obtener los datos
+                orderBy = { applicationDate: order };
+                break;
+            case 'name':
+            default:
+                orderBy = { candidate: { firstName: order } };
+                break;
+        }
+        
+        // Buscar aplicaciones para esta posición
+        const applications = await prisma.application.findMany({
+            where: { positionId },
+            include: {
+                candidate: true,
+                interviewStep: true,
+                interviews: {
+                    select: {
+                        score: true,
+                        interviewDate: true
+                    }
+                }
+            },
+            orderBy,
+            skip: offset,
+            take: limit
+        });
+        
+        // Transformar datos para la respuesta
+        return applications.map(app => {
+            // Calcular puntuación media
+            const validScores = app.interviews
+                .map(interview => interview.score)
+                .filter((score): score is number => score !== null && score !== undefined);
+                
+            const averageScore = validScores.length > 0
+                ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length
+                : null;
+                
+            // Obtener fecha de última entrevista
+            const interviewDates = app.interviews
+                .map(interview => interview.interviewDate)
+                .filter(date => date !== null);
+                
+            const lastInterviewDate = interviewDates.length > 0
+                ? new Date(Math.max(...interviewDates.map(date => date.getTime())))
+                : null;
+                
+            return {
+                id: app.candidate.id,
+                applicationId: app.id,
+                fullName: `${app.candidate.firstName} ${app.candidate.lastName}`,
+                email: app.candidate.email,
+                phone: app.candidate.phone,
+                currentInterviewStep: {
+                    id: app.interviewStep.id,
+                    name: app.interviewStep.name
+                },
+                averageScore,
+                lastInterviewDate,
+                applicationDate: app.applicationDate
+            };
+        });
+    }
 }
 

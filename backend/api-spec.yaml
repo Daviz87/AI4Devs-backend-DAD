@@ -185,4 +185,191 @@ paths:
           description: Invalid file type, only PDF and DOCX are allowed
         '500':
           description: Error during the file upload process
+  /positions/{id}/candidates:
+    get:
+      summary: Get candidates for a position
+      description: Retrieves all candidates that have applied to a specific position
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the position
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [name, stage, score]
+            default: name
+          description: Field to sort by
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of results
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Number of results to skip
+      responses:
+        '200':
+          description: List of candidates for the position
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: Candidate ID
+                    applicationId:
+                      type: integer
+                      description: Application ID
+                    fullName:
+                      type: string
+                      description: Full name of the candidate
+                    email:
+                      type: string
+                      description: Email of the candidate
+                    phone:
+                      type: string
+                      description: Phone number of the candidate
+                    currentInterviewStep:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                    averageScore:
+                      type: number
+                      nullable: true
+                      description: Average score of all interviews
+                    lastInterviewDate:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    applicationDate:
+                      type: string
+                      format: date-time
+        '404':
+          description: Position not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Position not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Internal Server Error
+  /applications/{id}/stage:
+    put:
+      summary: Update an application's interview stage
+      description: Updates the current interview step of an application
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - interviewStepId
+              properties:
+                interviewStepId:
+                  type: integer
+                  description: ID of the new interview step
+                notes:
+                  type: string
+                  description: Notes about the stage change
+                  maxLength: 500
+      responses:
+        '200':
+          description: Updated application
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  candidateId:
+                    type: integer
+                  positionId:
+                    type: integer
+                  currentInterviewStep:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                  applicationDate:
+                    type: string
+                    format: date-time
+                  notes:
+                    type: string
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Invalid or missing interview step ID
+        '404':
+          description: Application or interview step not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Application not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Internal Server Error
 
